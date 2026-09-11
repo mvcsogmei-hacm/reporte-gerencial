@@ -815,12 +815,34 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
 .pd-r.me { margin: 2px -6px; padding: 8px 10px; border-radius: 8px; background: var(--hb-ico); color: #fff; }
 .pd-r.me .pd-rn, .pd-r.me b { font-weight: 700; color: #fff; }
 .pd-r.me + .pd-r, .pd-r + .pd-r.me { border-top-color: transparent; }
-/* selector arriba a la derecha, a la altura del título */
-.page2 .card.sector-card { position: relative; }
-.sector-card .pd-tabs { position: absolute; top: 10px; right: 14px; z-index: 1; padding: 2px; }
-.sector-card .pd-tabs button { flex: 0 0 auto; height: 19px; padding: 0 9px; font-size: 10.5px; }
-/* el subtítulo baja un poco para no quedar bajo el selector */
-.sector-card .card-sub { margin-top: 5px; }
+/* selector Inversiones | Actividades en el encabezado, a la derecha del título (una, otra o ambas) */
+/* encabezado en rejilla: título e interruptor en la primera fila; el subtítulo ocupa todo el ancho debajo */
+.sector-card .card-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; column-gap: 10px; }
+.sector-card .card-head-text { display: contents; }
+.sector-card .card-title { grid-column: 1; grid-row: 1; }
+.sector-card .card-sub { grid-column: 1 / -1; grid-row: 2; }
+.sector-card .rk-sw { grid-column: 2; grid-row: 1; margin: 3px 0 0; }
+.rk-sw { display: inline-flex; flex: 0 0 auto; align-self: flex-start; align-items: center; gap: 10px; margin: 2px 0 0 auto; }
+/* mismo estilo que el combo de departamento de la cabecera (.rc-seg): cápsula blanca con borde fino, opciones redondeadas
+   y cada opción encendida en azul marino con texto blanco (se pueden encender las dos) */
+.rk-sw.rk-split { gap: 2px; padding: 2px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); box-shadow: 0 1px 2px rgba(15, 37, 69, .06); }
+.rk-split button { height: 24px; padding: 0 11px; border: 0; border-radius: 999px; background: transparent; color: var(--ink-2); font-size: 11.5px; font-weight: 600; white-space: nowrap; transition: background .15s, color .15s; }
+.rk-split button:not(.on):hover { background: var(--surface-2); color: var(--ink); }
+.rk-split button.on { background: #1F4E8C; color: #fff; }
+.rk-split button:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 1px; }
+/* puesto de las filas 4.º a 6.º: cuadrito azul dentro de la barra (en la fila pintada de Vivienda, blanco con número azul) */
+.pd-pos { display: grid; flex: 0 0 auto; place-items: center; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 5px; background: #1F4E8C; font-size: 11px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
+.pd-r.me .pd-pos { background: #fff; color: #1F4E8C; }
+/* podio + puestos 4.º a 6.º con PIM: el espacio libre se reparte entre podio y lista */
+.sector-card .card-body { justify-content: space-evenly; }
+.sector-card .pd-v small { line-height: 1.2; text-align: center; }
+.sector-card .pd-r { padding: 10px 0; }
+.sector-card .pd-r.me { padding: 10px; }   /* la fila pintada de Vivienda conserva su margen lateral dentro de la barra azul */
+.pd-pim { flex: 0 0 auto; margin-left: auto; font-size: 11px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pd-r.me .pd-pim { color: rgba(255, 255, 255, .8); }
+/* al calcular la escala la tarjeta cuenta con su alto anterior (418 px medidos): así la página 2 no cambia de escala
+   y las listas de Autoridades no se cortan, aunque ahora tenga menos filas */
+.grid.measuring .sector-card { height: 418px; }
 .pd-empty { font-size: 12px; color: var(--muted); }
 .grid.measuring .pd { flex: none; }
 
@@ -836,8 +858,10 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
 .aun-cam { display: flex; flex-direction: column; gap: 6px; flex: 2 1 auto; min-height: 0; padding: 12px 14px; border-radius: 12px; background: var(--hb-band); }
 .aun-cam-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); }
 .aun-cam-h b { font-size: 24px; letter-spacing: 0; color: var(--ink); font-variant-numeric: tabular-nums; }
-.aun-prs { display: flex; flex: 1 1 auto; flex-direction: column; justify-content: space-around; gap: 4px; }
-.aun-pr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) 28px; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink); }
+/* sin separación fija y con interlineado corto: las filas se acercan si falta espacio en vez de cortarse
+   (con escalas apenas distintas, la última fila de Diputados y Senadores quedaba cortada) */
+.aun-prs { display: flex; flex: 1 1 auto; flex-direction: column; justify-content: space-evenly; gap: 0; }
+.aun-pr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) 28px; align-items: center; gap: 8px; font-size: 12.5px; line-height: 1.2; color: var(--ink); }
 .aun-pn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .aun-pb { display: block; height: 9px; overflow: hidden; border-radius: 999px; background: var(--surface); }
 :root[data-theme="dark"] .aun-pb { background: var(--hb-track); }
@@ -953,6 +977,20 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
 /* etiquetas de la mariposa solo con cantidades (sin %) y más grandes */
 .page2 .bf1-b { grid-template-columns: 74px minmax(0, 1fr) minmax(0, 1fr) 74px; }
 .page2 .bf1-v b { font-size: 16px; }
+/* Filas de la mariposa: variante 3 de propuestas-mariposa.html con las cifras en los extremos de la fila,
+   las barras saliendo del nombre del centro y, debajo del nombre, solo la cifra total. Encabezado: .bf1-hd. */
+.bf3-r { display: grid; flex: 1 0 auto; grid-template-columns: 56px minmax(0, 1fr) 78px minmax(0, 1fr) 56px; align-items: center; gap: 4px; max-height: 60px; padding: 3px 8px; border-radius: 8px; background: var(--hb-band); }
+.bf3-v { font-size: 13px; color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bf3-v.r { text-align: right; }
+.bf3-t { display: flex; align-items: center; min-width: 0; }
+.bf3-t.l { justify-content: flex-end; }
+.bf3-t i { display: block; height: 16px; min-width: 3px; }
+.bf3-t.l i { border-radius: 5px 0 0 5px; background: var(--c-san); }
+.bf3-t.r i { border-radius: 0 5px 5px 0; background: var(--c-viv); }
+.bf3-c { display: flex; flex-direction: column; align-items: center; line-height: 1.15; text-align: center; }
+.bf3-c span { font-size: 11px; font-weight: 600; color: var(--ink); }
+.bf3-c b { font-size: 11px; font-weight: 700; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.grid.measuring .bf3-r { flex: none; }
 
 /* ---------- Reporte · gestor de exportación ---------- */
 .rep { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; gap: 16px; max-width: 1240px; }
@@ -978,6 +1016,45 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
 .rep-pend b { font-size: 14px; color: var(--ink); }
 .rep-pend span { font-size: 13px; color: var(--ink-2); }
 @media screen and (max-width: 1180px) { .rep { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- Página Reporte (propuesta 4 de propuestas-reporte.html) ----------
+   Tarjetas grandes para elegir el documento, franja de opciones y barra con el resumen y un único botón. */
+/* ancho moderado y centrado: a todo el ancho se veía demasiado estirado */
+.rep4 { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 1080px; margin: 0 auto; }
+.rep-types { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.rep-tile { display: flex; align-items: stretch; gap: 14px; width: 100%; padding: 16px; border: 1.5px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--ink); text-align: left; box-shadow: var(--shadow); transition: border-color .15s, box-shadow .15s; }
+.rep-tile:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+.rep-tile.on { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow); }
+.rep-ill { display: grid; flex: 0 0 170px; place-items: center; padding: 12px; border-radius: 10px; background: var(--hb-band); }
+.rep-txt { display: flex; flex-direction: column; justify-content: center; gap: 8px; min-width: 0; }
+.rep-txt b { font-size: 16px; font-weight: 600; color: var(--ink); }
+.rep-txt small { font-size: 13px; line-height: 1.4; color: var(--ink-2); }
+.rep-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.rep-badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px; background: var(--surface-2); font-size: 11.5px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+.rep-ck { display: grid; flex: 0 0 auto; align-self: flex-start; place-items: center; width: 22px; height: 22px; border: 1.5px solid var(--axis); border-radius: 50%; background: var(--surface); color: #fff; }
+.rep-ck svg { width: 14px; height: 14px; opacity: 0; }
+.rep-tile.on .rep-ck { border-color: var(--accent); background: var(--accent); }
+.rep-tile.on .rep-ck svg { opacity: 1; }
+/* hojas en miniatura: dashboard 16:9 y reporte A4 (colores fijos: es un dibujo de la hoja impresa) */
+.rep-s169 { display: grid; grid-template-columns: 11% 1fr 1fr 1fr; gap: 4%; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; padding: 4% 4% 4% 0; border-radius: 6px; background: #ECEFF3; box-shadow: 0 1px 2px rgba(15, 37, 69, .1), 0 6px 16px rgba(15, 37, 69, .12); }
+.rep-s169 i { display: block; border-radius: 3px; background: linear-gradient(180deg, #DCE5F0 0 16%, #fff 16%); }
+.rep-s169 i:first-child { margin: -8% 0; border-radius: 6px 0 0 6px; background: linear-gradient(180deg, #0F2E57, #081B34); }
+.rep-a4 { display: flex; flex-direction: column; gap: 5%; width: 74px; aspect-ratio: 210 / 297; overflow: hidden; padding: 9% 8%; border-radius: 4px; background: #fff; box-shadow: 0 1px 2px rgba(15, 37, 69, .1), 0 6px 16px rgba(15, 37, 69, .12); }
+.rep-a4 b { display: block; flex: 0 0 9%; border-radius: 2px; background: #1F4E8C; }
+.rep-a4 i { display: block; flex: 0 0 auto; height: 4px; border-radius: 2px; background: #DCE5F0; }
+.rep-a4 i.s { width: 62%; }
+.rep-a4 em { display: grid; flex: 1; grid-template-columns: 1fr 1fr; gap: 6%; }
+.rep-a4 em::before, .rep-a4 em::after { content: ""; border-radius: 3px; background: #F3F6FA; }
+.rep-strip { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 18px 34px; padding: 16px 18px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); }
+.rep-strip .rep-fs { width: auto; }
+.rep-fs:disabled { opacity: .45; }
+.rep-fs:disabled .rep-opt { cursor: not-allowed; }
+/* el botón de descarga cierra la franja de opciones, a la derecha */
+.rep-strip .rep-btn { align-self: flex-end; margin-left: auto; }
+@media screen and (max-width: 900px) {
+  .rep-types { grid-template-columns: minmax(0, 1fr); }
+  .rep-ill { flex-basis: 120px; }
+}
 
 /* ---------- Exportación a PDF: aviso, dibujo a 1920×1080 y hojas de impresión ---------- */
 .export-aviso { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; background: var(--page); }
@@ -1047,6 +1124,8 @@ body.exportando .app * { animation: none !important; transition: none !important
 .rpt-k small { font-size: 9.5px; color: var(--r-mut); }
 .rpt-h5 { margin: 12px 0 6px; font-size: 11.5px; font-weight: 700; color: var(--r-ink); }
 .rpt-fen th { text-align: center; }
+/* tabla de FEN atendidos por UBO: todos los datos centrados (también la columna UBO y las cifras, que iban a la derecha) */
+.rpt-fen td, .rpt-fen td.n { text-align: center; }
 .rpt-fen thead tr:nth-child(2) th { background: #1d5c96; font-weight: 600; }
 .rpt-fen .rpt-tt td { background: var(--r-navy2); color: #fff; }
 .rpt-pie { position: absolute; right: 44px; bottom: 22px; left: 44px; display: flex; justify-content: space-between; padding-top: 6px; border-top: 1px solid var(--r-line); font-size: 9px; color: var(--r-mut); }

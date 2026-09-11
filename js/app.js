@@ -139,10 +139,11 @@
   };
 
   /* ---------- Maquetado ---------- */
-  const card = (title, sub, body, cls, ico) =>
+  /* extra (opcional): HTML que va en el encabezado a la derecha del título (p. ej. el interruptor del ranking) */
+  const card = (title, sub, body, cls, ico, extra) =>
     '<section class="card ' + (cls || '') + '"><div class="card-head">' + (ico ? '<span class="card-ico">' + ico + '</span>' : '') +
     '<div class="card-head-text"><h2 class="card-title">' + title + '</h2>' +
-    (sub ? '<p class="card-sub">' + sub + '</p>' : '') + '</div></div><div class="card-body">' + body + '</div></section>';
+    (sub ? '<p class="card-sub">' + sub + '</p>' : '') + '</div>' + (extra || '') + '</div><div class="card-body">' + body + '</div></section>';
 
   /* Fila "Propuesta 1": icono cuadrado azul fuera, banda muy clara con la
      etiqueta, barra de progreso al centro y la cifra en negrita.
@@ -481,10 +482,9 @@
       '<span class="cr-pill">' + (rg.activo ? ICO.alert : icoVisto) + (rg.activo ? 'Activos' : 'Sin conflictos') + '</span>' + (rg.activo ? '<em>' + esc(rg.tipo) + '</em>' : '') + '</div></div>',
       'card-fit crd');
 
-    /* --- Obras en ejecución, paralizadas y reactivadas: mariposa compacta (variante 1, etiqueta arriba).
-           Saneamiento a la izquierda y vivienda a la derecha; cada fila lleva su nombre arriba,
-           la cifra y el % de reparto en los extremos, y las barras se comparan con el mayor
-           de los dos sectores. Ocupa media columna. --- */
+    /* --- Obras en ejecución, paralizadas y reactivadas: mariposa compacta (variante 3, cifras en los extremos).
+           Saneamiento a la izquierda y vivienda a la derecha; el nombre va al centro con el total debajo,
+           y las barras se comparan con el mayor de los dos sectores. Ocupa media columna. --- */
     const corto = x => x >= 1e6 ? nf1.format(x / 1e6) + ' M' : x >= 1e4 ? nf0.format(Math.round(x / 1000)) + ' mil' : nf0.format(x);
     const mariposa = (titulo, S, notaBrecha) => {
       const s = S.saneamiento, v = S.vivienda;
@@ -496,27 +496,31 @@
         ['Obras', s.total, v.total, F.n],
         ['Directas', s.directa, v.directa, F.n, S.directaTotal],
         ['Por transferencia', s.transferencia, v.transferencia, F.n, S.transferenciaTotal],
-        ['Inversión S/ mill.', s.monto, v.monto, x => nf1.format(x)],
+        ['Inversión', s.monto, v.monto, x => nf1.format(x), null, 'montos en S/ millones'],   /* la unidad se sobreentiende; queda en el tooltip */
         ['Población', s.poblacion, v.poblacion, corto],
         brecha
       ];
-      /* etiquetas solo con la cantidad (sin %); el reparto en % queda en el tooltip.
-         Si el Excel no desglosa la fila por sector (directa/transferencia en paralizadas y reactivadas) se muestra el total. */
+      /* Filas = variante 3 de propuestas-mariposa.html con las cifras en los extremos de la fila: las barras salen
+         del nombre del centro y, debajo del nombre, va solo la cifra total de los dos sectores (sin «Total» ni %);
+         el reparto en % queda en el tooltip. El % de cierre de brecha no se suma. Si el Excel no desglosa la fila por
+         sector (directa/transferencia en paralizadas y reactivadas) se muestra el total que trae. */
+      const lado = (cls, x, m, fmt) => {
+        const cifra = '<b class="bf3-v ' + cls + '">' + (x == null ? '—' : fmt(x)) + '</b>';
+        const barra = '<span class="bf3-t ' + cls + '">' + (x > 0 ? '<i style="width:' + (x / m * 100).toFixed(1) + '%"></i>' : '') + '</span>';
+        return cls === 'l' ? cifra + barra : barra + cifra;
+      };
+      const centro = (label, t, fmt) => '<span class="bf3-c"><span>' + label + '</span>' + (t != null ? '<b>' + fmt(t) + '</b>' : '') + '</span>';
       const fila = f => {
         const label = f[0], sv = f[1], vv = f[2], fmt = f[3], total = f[4], nota = f[5];
         if (sv == null || vv == null) {
           const conTotal = total != null;
-          return '<div class="bf1-r" data-tip="' + esc(label + (conTotal ? ': ' + fmt(total) + ' en total; el Excel no lo desglosa por sector' : ': sin dato en el Excel')) + '">' +
-            '<div class="bf1-n">' + label + (conTotal ? ' · ' + fmt(total) + ' en total' : '') + '</div><div class="bf1-b">' +
-            '<span class="bf1-v l"><b>—</b></span><span class="bf1-t l"></span><span class="bf1-t r"></span><span class="bf1-v r"><b>—</b></span></div></div>';
+          return '<div class="bf3-r" data-tip="' + esc(label + (conTotal ? ': ' + fmt(total) + ' en total; el Excel no lo desglosa por sector' : ': sin dato en el Excel')) + '">' +
+            lado('l', null, 1, fmt) + centro(label, conTotal ? total : null, fmt) + lado('r', null, 1, fmt) + '</div>';
         }
         const m = Math.max(sv, vv) || 1, ps = Math.round(sv / ((sv + vv) || 1) * 100), pv = 100 - ps;
-        return '<div class="bf1-r" data-tip="' + esc(label + ': saneamiento ' + fmt(sv) + ' (' + ps + ' %) · vivienda ' + fmt(vv) + ' (' + pv + ' %)' + (nota ? ' · ' + nota : '')) + '">' +
-          '<div class="bf1-n">' + label + '</div><div class="bf1-b">' +
-          '<span class="bf1-v l"><b>' + fmt(sv) + '</b></span>' +
-          '<span class="bf1-t l">' + (sv > 0 ? '<i style="width:' + (sv / m * 100).toFixed(1) + '%"></i>' : '') + '</span>' +
-          '<span class="bf1-t r">' + (vv > 0 ? '<i style="width:' + (vv / m * 100).toFixed(1) + '%"></i>' : '') + '</span>' +
-          '<span class="bf1-v r"><b>' + fmt(vv) + '</b></span></div></div>';
+        const suma = fmt === F.pct ? null : sv + vv;
+        return '<div class="bf3-r" data-tip="' + esc(label + ': saneamiento ' + fmt(sv) + ' (' + ps + ' %) · vivienda ' + fmt(vv) + ' (' + pv + ' %)' + (suma != null ? ' · total ' + fmt(suma) : '') + (nota ? ' · ' + nota : '')) + '">' +
+          lado('l', sv, m, fmt) + centro(label, suma, fmt) + lado('r', vv, m, fmt) + '</div>';
       };
       return card(titulo, 'Por sector: saneamiento y vivienda',
         '<div class="bf1"><div class="bf1-hd"><span class="bf1-tag san">' + ICO.sanit + 'Saneamiento</span><span class="bf1-tag viv">' + ICO.house + 'Vivienda</span></div>' +
@@ -525,13 +529,28 @@
 
     /* --- PRESET --- */
     const pr = (DREAL.preset && DREAL.preset[region]) || d.preset;
-    /* Propuesta 4 · Etapas: total → en evaluación → aptos, con su parte del total */
-    const pe = Math.round(pr.evaluacion / (pr.total || 1) * 100), pap = Math.round(pr.aptos / (pr.total || 1) * 100);
-    const step = (cls, ico, label, v, x) => '<div class="stp ' + cls + '" data-tip="' + label + ': ' + F.n(v) + ' (' + x + ')"><span class="stp-c">' + ico + '</span><b>' + F.n(v) + '</b><span class="stp-n">' + label + '</span><small>' + x + '</small></div>';
-    const preset = card('Expedientes técnicos en PRESET', 'Total, en evaluación y aptos',
-      '<div class="stps">' + step('s0', ICO.file, 'Total', pr.total, '100 %') + '<span class="stp-l"></span>' + step('s1', ICO.hourglass, 'En evaluación', pr.evaluacion, pe + ' %') +
-      '<span class="stp-l"></span>' + step('s2', ICO.check, 'Aptos', pr.aptos, pap + ' %') + '</div>' +
-      '<div class="st2">' + stat(ICO.coins, 'Monto de inversión', mill(pr.monto)) + stat(ICO.people, 'Población beneficiaria', F.pers(pr.poblacion)) + '</div>', 'card-fit');
+    let preset;
+    if (pr.estados) {
+      /* Excel por estado: abandonados, en evaluación y aptos son independientes (no se suman ni hay total);
+         en la tarjeta solo va la cantidad de cada estado; su monto y población quedan en el tooltip */
+      const icoAband = I('<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M10 12l4 4M14 12l-4 4"/>');
+      const est = (cls, ico, label, k) => {
+        const e = pr.estados[k];
+        return '<div class="stp ' + cls + '" data-tip="' + label + ': ' + F.n(e.cantidad) + ' expedientes · ' + mill(e.monto) + ' · ' + F.pers(e.poblacion) + ' personas">' +
+          '<span class="stp-c">' + ico + '</span><b>' + F.n(e.cantidad) + '</b><span class="stp-n">' + label + '</span></div>';
+      };
+      preset = card('Expedientes técnicos en PRESET', 'Abandonados, en evaluación y aptos',
+        '<div class="stps">' + est('s0', icoAband, 'Abandonados', 'abandonados') + '<span class="stp-l"></span>' + est('s1', ICO.hourglass, 'En evaluación', 'evaluacion') +
+        '<span class="stp-l"></span>' + est('s2', ICO.check, 'Aptos', 'aptos') + '</div>', 'card-fit');
+    } else {
+      /* datos de ejemplo (sin estados): Propuesta 4 · Etapas: total → en evaluación → aptos, con su parte del total */
+      const pe = Math.round(pr.evaluacion / (pr.total || 1) * 100), pap = Math.round(pr.aptos / (pr.total || 1) * 100);
+      const step = (cls, ico, label, v, x) => '<div class="stp ' + cls + '" data-tip="' + label + ': ' + F.n(v) + ' (' + x + ')"><span class="stp-c">' + ico + '</span><b>' + F.n(v) + '</b><span class="stp-n">' + label + '</span><small>' + x + '</small></div>';
+      preset = card('Expedientes técnicos en PRESET', 'Total, en evaluación y aptos',
+        '<div class="stps">' + step('s0', ICO.file, 'Total', pr.total, '100 %') + '<span class="stp-l"></span>' + step('s1', ICO.hourglass, 'En evaluación', pr.evaluacion, pe + ' %') +
+        '<span class="stp-l"></span>' + step('s2', ICO.check, 'Aptos', pr.aptos, pap + ' %') + '</div>' +
+        '<div class="st2">' + stat(ICO.coins, 'Monto de inversión', mill(pr.monto)) + stat(ICO.people, 'Población beneficiaria', F.pers(pr.poblacion)) + '</div>', 'card-fit');
+    }
 
     /* --- Inversiones en vivienda --- */
     const V = (DREAL.vivienda && DREAL.vivienda[region]) || d.vivienda;
@@ -540,7 +559,7 @@
       '<div class="vr-s"><span>Monto <b>' + mill(o.monto) + '</b></span><span>Población <b>' + F.pers(o.poblacion) + '</b></span></div></div></div>';
     const vSinDato = (ico, label) => '<div class="vr" data-tip="' + label + ': sin dato en el Excel"><span class="hb-ico">' + ico + '</span><div class="vr-b">' +
       '<div class="vr-top"><span>' + label + '</span><b>—</b></div><div class="vr-s"><span>Sin dato en el Excel</span></div></div></div>';
-    const vivienda = card('Inversiones en vivienda', 'Bonos, vivienda rural y titulación',
+    const vivienda = card('Inversiones en vivienda en el 2026', 'Bonos, vivienda rural y titulación',
       '<div class="vr-list">' + vrow(ICO.gift, 'Bonos desembolsados', V.bonos) + vrow(ICO.house, 'Viviendas rurales construidas', V.viviendaRural) + (V.titulos ? vrow(ICO.key, 'Títulos registrados', V.titulos) : vSinDato(ICO.key, 'Títulos registrados')) +
       '<div class="vr" data-tip="Predios registrados: ' + F.n(V.predios.cantidad) + '"><span class="hb-ico">' + ICO.parcel + '</span><div class="vr-b"><div class="vr-top"><span>Predios registrados</span><b>' + F.n(V.predios.cantidad) + '</b></div></div></div>' +
       '</div>', 'card-fit viv-fit');
@@ -592,33 +611,46 @@
     };
     MODALES.fen = fenDetalle();
 
-    /* --- Sector: podio del ranking total del Gobierno Nacional.
-       Datos reales de data/data.xlsx, convertidos a data/data.js con data/actualizar_data.py.
-       Nacional usa el total; cada región usa su propio ranking (departamento donde se ubica la meta del gasto).
-       Debajo del podio siempre van 4 filas: puestos 4.º a 6.º y, en la 4.ª fila, el 7.º o Vivienda (37) si está del 8.º para abajo.
-       La fila de Vivienda va pintada. --- */
+    /* --- Ranking total por gobierno: podio del Gobierno Nacional por sector, ordenado solo por ejecución presupuestal (% de avance).
+       Datos reales del MEF (data/scrapear_mef.py → data.xlsx → data/actualizar_data.py → data.js) separados en inversiones
+       (proyectos) y actividades: la cápsula partida a la derecha del título enciende uno, otro o ambos (rankTipos; ambos = total). Nacional usa el total
+       del país; cada región, su propio ranking (departamento donde se ubica la meta del gasto). Si data.js no trae la
+       separación (versión anterior), se usa el ranking total y no se muestra el interruptor.
+       Podio y, debajo, tres filas (4.º, 5.º y 6.º, o Vivienda con su puesto en la última si no está entre los 5 primeros);
+       cada sector muestra su % de ejecución y su PIM. La fila de Vivienda va pintada. --- */
     const sectorCard = () => {
       const DR = window.DATA_REAL || {};
-      const R = (nac ? DR.ranking : (DR.porRegion || {})[d.nombre]) || [];
-      const subt = nac ? 'Ranking total Gobierno Nacional' : 'Gobierno Nacional en ' + esc(d.nombre);
-      const tabs = '<div class="pd-tabs" role="tablist">' + [['avance', 'Por ejecución presupuestal'], ['pim', 'Por PIM']].map(t =>
-        '<button type="button" role="tab" data-rank="' + t[0] + '" aria-selected="' + (t[0] === rankModo) + '" class="' + (t[0] === rankModo ? 'on' : '') + '">' + t[1] + '</button>').join('') + '</div>';
-      if (R.length < 3) return card('Sector', subt, tabs + '<p class="pd-empty">' + (R.length ? 'En esta región hay menos de 3 sectores del Gobierno Nacional con presupuesto.' : 'Sin datos. Corre <b>python data/scrapear_mef.py</b> y luego <b>python data/actualizar_data.py</b>.') + '</p>', 'card-half');
-      const orden = R.slice().sort((a, b) => (b[rankModo] || 0) - (a[rankModo] || 0));
+      const conTipo = !!(DR.rankingTipo && DR.porRegionTipo);
+      /* un solo tipo marcado: su ranking; los dos marcados: el total (inversiones + actividades, ranking y porRegion) */
+      const soloUno = conTipo && rankTipos.inversiones !== rankTipos.actividades;
+      const tipo = rankTipos.inversiones ? 'inversiones' : 'actividades';
+      const R = (soloUno
+        ? (nac ? DR.rankingTipo[tipo] : (DR.porRegionTipo[tipo] || {})[d.nombre])
+        : (nac ? DR.ranking : (DR.porRegion || {})[d.nombre])) || [];
+      /* el título dice qué es; el subtítulo dice el ámbito (con filtro, la región) */
+      const subt = 'Gobierno Nacional en ' + (nac ? 'todo el Perú' : esc(d.nombre));
+      /* cápsula partida (propuesta 6 de propuestas-selector-ranking.html): cada mitad se enciende por separado; con las dos, total */
+      const mitad = (k, t) => '<button type="button" class="' + (rankTipos[k] ? 'on' : '') + '" data-ranktipo="' + k + '" aria-pressed="' + rankTipos[k] + '">' + t + '</button>';
+      const tabs = conTipo ? '<div class="rk-sw rk-split" role="group" aria-label="Tipo de gasto">' + mitad('inversiones', 'Inversiones') + mitad('actividades', 'Actividades') + '</div>' : '';
+      if (R.length < 3) return card('Ranking total por gobierno', subt, '<p class="pd-empty">' + (R.length ? 'En esta región hay menos de 3 sectores del Gobierno Nacional con presupuesto' + (soloUno ? ' en ' + tipo : '') + '.' : 'Sin datos. Corre <b>python data/scrapear_mef.py</b> y luego <b>python data/actualizar_data.py</b>.') + '</p>', 'card-half sector-card', null, tabs);
+      const orden = R.slice().sort((a, b) => (b.avance || 0) - (a.avance || 0));
       const millS = v => F.n(Math.round(v / 1e6));
-      /* las dos vistas llevan la línea de unidad (vacía en ejecución) para que el podio no cambie de alto */
-      const valor = x => rankModo === 'pim' ? '<b>' + millS(x.pim) + '</b><small>S/ mill.</small>' : '<b>' + F.pct(x.avance) + '</b><small aria-hidden="true">&nbsp;</small>';
-      const valorTxt = x => rankModo === 'pim' ? 'S/ ' + millS(x.pim) + ' mill.' : F.pct(x.avance);
+      /* podio: % de ejecución y, debajo, el PIM del sector */
+      const valor = x => '<b>' + F.pct(x.avance) + '</b><small>PIM S/ ' + millS(x.pim) + ' mill.</small>';
       const tipS = (x, i) => esc((i + 1) + '.º · ' + x.codigo + ': ' + x.sector + ' · PIM S/ ' + millS(x.pim) + ' mill. · devengado S/ ' + millS(x.devengado) + ' mill. · avance ' + F.pct(x.avance));
       const nombre = x => esc((x.codigo ? x.codigo + ': ' : '') + x.sector);
       const podio = i => '<div class="pd-c p' + (i + 1) + '" data-tip="' + tipS(orden[i], i) + '"><span class="pd-m">' + (i + 1) + '</span><span class="pd-n">' + nombre(orden[i]) + '</span><span class="pd-v">' + valor(orden[i]) + '</span></div>';
-      const fila = (i, cls) => '<div class="pd-r' + (cls ? ' ' + cls : '') + '" data-tip="' + tipS(orden[i], i) + '"><span class="pd-rn">' + (i + 1) + ' · ' + nombre(orden[i]) + '</span><b>' + valorTxt(orden[i]) + '</b></div>';
+      /* filas: puesto en un cuadrito azul dentro de la barra, nombre, PIM y % de ejecución.
+         Van el 4.º y el 5.º; la última fila es el 6.º, salvo que Vivienda (37) no esté entre los 5 primeros:
+         entonces la última fila muestra a Vivienda con su puesto real */
+      const fila = (i, cls) => '<div class="pd-r' + (cls ? ' ' + cls : '') + '" data-tip="' + tipS(orden[i], i) + '"><span class="pd-pos">' + (i + 1) + '</span>' +
+        '<span class="pd-rn">' + nombre(orden[i]) + '</span><span class="pd-pim">PIM S/ ' + millS(orden[i].pim) + ' mill.</span><b>' + F.pct(orden[i].avance) + '</b></div>';
       const iv = orden.findIndex(x => x.codigo === '37');
-      const cuarta = iv > 6 ? iv : 6;
-      const lista = [3, 4, 5, cuarta].filter(i => i < orden.length).map(i => fila(i, i === iv ? 'me' : '')).join('');
-      return card('Sector', subt, tabs +
+      const ultima = iv > 4 ? iv : 5;
+      const lista = [3, 4, ultima].filter(i => i < orden.length).map(i => fila(i, i === iv ? 'me' : '')).join('');
+      return card('Ranking total por gobierno', subt,
         '<div class="pd">' + podio(1) + podio(0) + podio(2) + '</div>' +
-        '<div class="pd-list">' + lista + '</div>', 'card-half sector-card');
+        '<div class="pd-list">' + lista + '</div>', 'card-half sector-card', null, tabs);
     };
 
     const EJ = (DREAL.obrasEjecucion && DREAL.obrasEjecucion[region]) || O.ejecucion.sectores, PA = (DREAL.obrasParalizadas && DREAL.obrasParalizadas[region]) || O.paralizadas.sectores,
@@ -697,29 +729,37 @@
     if (rc) { abrirCombo(rc, false); rc.querySelector('[data-rc-tog]').focus(); }
   });
 
+  /* Página Reporte = propuesta 4 de propuestas-reporte.html, a todo el ancho: el documento se elige con dos tarjetas
+     grandes ilustradas y debajo va una franja con las opciones y el botón de descarga (sin textos de resumen).
+     El ámbito se elige con el combo de departamento dentro de la franja (con «Nacional y las 25 regiones»); en esta
+     página se oculta el combo de la cabecera. Páginas y Tema solo aplican a dashboards (con el reporte quedan atenuadas). El data-exportar del
+     botón sigue al documento elegido; repDoc se conserva entre renders (por ejemplo, al cambiar de región). */
+  let repDoc = 'dashboards';
+  const ICO_VISTO_REP = I('<path d="M5 12.5l4.5 4.5L19 7.5"/>');
   function renderReporte() {
     const tema = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
     const opt = (tipo, name, value, label, checked, extra) => '<label class="rep-opt"><input type="' + tipo + '" name="' + name + '" value="' + value + '"' + (checked ? ' checked' : '') + '>' +
       '<span>' + label + (extra ? ' <b>' + extra + '</b>' : '') + '</span></label>';
-    /* combo de departamento, igual al del encabezado, con la opción extra «Nacional y las 25 regiones» (lo dibuja montarCombo) */
+    /* combo de departamento con la opción extra «Nacional y las 25 regiones» (lo dibuja montarCombo) */
     const regSel = name => '<div class="rc rc-rep"><select name="' + name + '" aria-label="Departamento" hidden>' +
       DATA.regiones.map(x => '<option value="' + esc(x) + '"' + (x === region ? ' selected' : '') + '>' + esc(x) + '</option>').join('') +
       '<option value="' + TODAS + '">Nacional y las 25 regiones</option></select></div>';
-    return '<div class="rep">' +
-      '<section class="card rep-card"><div class="card-head"><div class="card-head-text"><h2 class="card-title">Exportar dashboards</h2>' +
-      '<p class="card-sub">PDF con una hoja por página del tablero · menú siempre contraído</p></div></div><div class="card-body">' +
-      '<fieldset class="rep-fs"><legend>Páginas</legend>' + opt('checkbox', 'rep-pag', 'general', 'Información general', true) + opt('checkbox', 'rep-pag', 'gestion', 'Gestión sectorial', true) + '</fieldset>' +
+    const tarjeta = (doc, ilustracion, titulo, texto, etiquetas) => '<button type="button" class="rep-tile' + (repDoc === doc ? ' on' : '') + '" data-repdoc="' + doc + '" aria-pressed="' + (repDoc === doc) + '">' +
+      '<span class="rep-ill">' + ilustracion + '</span><span class="rep-txt"><b>' + titulo + '</b><small>' + texto + '</small>' +
+      '<span class="rep-badges">' + etiquetas.map(x => '<span class="rep-badge">' + x + '</span>').join('') + '</span></span>' +
+      '<span class="rep-ck">' + ICO_VISTO_REP + '</span></button>';
+    const hoja169 = '<span class="rep-s169"><i></i><i></i><i></i><i></i></span>';
+    const hojaA4 = '<span class="rep-a4"><b></b><i></i><i class="s"></i><em></em><i></i><i class="s"></i><em></em></span>';
+    const soloDash = repDoc === 'dashboards' ? '' : ' disabled';
+    return '<div class="rep4">' +
+      '<div class="rep-types">' +
+      tarjeta('dashboards', hoja169, 'Dashboards del tablero', 'Las páginas Información general y Gestión sectorial, tal como se ven en pantalla, con el menú contraído.', ['16:9', '1 hoja por página']) +
+      tarjeta('reporte', hojaA4, 'Reporte ejecutivo sectorial', 'Formato del modelo en Word: infraestructura y brechas, presupuesto, obras, PRESET, vivienda, compromisos y FEN.', ['A4', '2 hojas por departamento']) +
+      '</div><div class="rep-strip">' +
       '<fieldset class="rep-fs"><legend>Ámbito</legend>' + regSel('rep-amb') + '</fieldset>' +
-      '<fieldset class="rep-fs"><legend>Tema</legend>' + opt('radio', 'rep-tema', 'light', 'Claro', tema === 'light') + opt('radio', 'rep-tema', 'dark', 'Oscuro', tema === 'dark') + '</fieldset>' +
-      '<div class="rep-foot"><p class="rep-resumen" id="rep-resumen"></p><button type="button" class="rep-btn" data-exportar="dashboards">' + ICO_EXPORT + 'Exportar PDF</button></div>' +
-      '<p class="rep-nota">El PDF se descarga directamente, con una hoja 16:9 por página.</p>' +
-      '</div></section>' +
-      '<section class="card rep-card"><div class="card-head"><div class="card-head-text"><h2 class="card-title">Exportar reporte</h2>' +
-      '<p class="card-sub">Reporte ejecutivo sectorial · 2 hojas A4 por departamento con el formato del modelo</p></div></div><div class="card-body">' +
-      '<fieldset class="rep-fs"><legend>Ámbito</legend>' + regSel('rep-ramb') + '</fieldset>' +
-      '<p class="rep-nota">Incluye infraestructura y brechas, obras de saneamiento y de vivienda, PRESET, ejecución presupuestal, vivienda y titulación, compromisos y alertas, y FEN.</p>' +
-      '<div class="rep-foot"><p class="rep-resumen" id="rep-resumen-r"></p><button type="button" class="rep-btn" data-exportar="reporte">' + ICO_EXPORT + 'Exportar reporte</button></div>' +
-      '<p class="rep-nota">El PDF se descarga directamente, en hojas A4.</p></div></section>' +
+      '<fieldset class="rep-fs" data-solo-dash' + soloDash + '><legend>Páginas</legend>' + opt('checkbox', 'rep-pag', 'general', 'Información general', true) + opt('checkbox', 'rep-pag', 'gestion', 'Gestión sectorial', true) + '</fieldset>' +
+      '<fieldset class="rep-fs" data-solo-dash' + soloDash + '><legend>Tema</legend>' + opt('radio', 'rep-tema', 'light', 'Claro', tema === 'light') + opt('radio', 'rep-tema', 'dark', 'Oscuro', tema === 'dark') + '</fieldset>' +
+      '<button type="button" class="rep-btn" data-exportar="' + repDoc + '">' + ICO_EXPORT + 'Descargar PDF</button></div>' +
       '</div>';
   }
   function renderConfiguracion() {
@@ -733,20 +773,30 @@
     const tema = (document.querySelector('input[name="rep-tema"]:checked') || {}).value || 'light';
     return { paginas: pag, regiones: amb === TODAS ? DATA.regiones.slice() : [amb], tema };
   }
+  /* los dos documentos usan el mismo combo de ámbito */
   function opcionesReporte() {
-    const amb = (document.querySelector('select[name="rep-ramb"]') || {}).value || region;
+    const amb = (document.querySelector('select[name="rep-amb"]') || {}).value || region;
     return { regiones: amb === TODAS ? DATA.regiones.slice() : [amb] };
   }
+  /* estado del botón según el documento elegido; sin textos de resumen: si está desactivado, el motivo va en su title */
   function resumenExport() {
-    const rr = $('#rep-resumen-r');
-    if (rr) { const k = opcionesReporte().regiones.length; rr.textContent = (k === 1 ? 'Se generará 1 reporte' : 'Se generarán ' + k + ' reportes') + ' · ' + k * 2 + ' hojas A4.'; }
-    const r = $('#rep-resumen'), b = document.querySelector('[data-exportar="dashboards"]');
-    if (!r || !b) return;
+    const b = document.querySelector('.rep4 [data-exportar]');
+    if (!b) return;
+    if (repDoc === 'reporte') { b.disabled = false; b.removeAttribute('title'); return; }
     const o = opcionesExport(), n = o.paginas.length * o.regiones.length;
     const angosta = window.innerWidth < ANCHO_MIN_EXPORT;
-    r.textContent = angosta ? 'Para exportar usa una ventana de al menos ' + ANCHO_MIN_EXPORT + ' px de ancho.' :
-      n ? 'Se generarán ' + n + (n === 1 ? ' hoja.' : ' hojas.') : 'Elige al menos una página.';
-    b.disabled = angosta || !n;
+    const motivo = angosta ? 'Para exportar usa una ventana de al menos ' + ANCHO_MIN_EXPORT + ' px de ancho' : !n ? 'Elige al menos una página' : '';
+    b.disabled = !!motivo;
+    if (motivo) b.title = motivo; else b.removeAttribute('title');
+  }
+  /* clic en una tarjeta de documento: se actualiza en el sitio (sin volver a dibujar, así no se pierden las casillas marcadas) */
+  function elegirDocRep(doc) {
+    repDoc = doc;
+    document.querySelectorAll('[data-repdoc]').forEach(t => { const on = t.dataset.repdoc === doc; t.classList.toggle('on', on); t.setAttribute('aria-pressed', on); });
+    document.querySelectorAll('[data-solo-dash]').forEach(f => { f.disabled = doc !== 'dashboards'; });
+    const b = document.querySelector('.rep4 [data-exportar]');
+    if (b) b.dataset.exportar = doc;
+    resumenExport();
   }
   const esperar = ms => new Promise(res => setTimeout(res, ms));
   /* Descarga directa, sin ventana de impresión: cada hoja se convierte en imagen con html-to-image (la pinta el propio
@@ -838,7 +888,9 @@
   /* ---------- Reporte ejecutivo sectorial (modelo: Reporte/Modelo reporte.docx) ----------
      Dos hojas A4 por ámbito con las 8 secciones del modelo. Usa los mismos datos que el tablero:
      DATA_REAL (Excel y MEF) donde existen y los de ejemplo en lo demás; lo que no viene en ninguna fuente dice "sin dato".
-     El modelo repite "Estado situacional de obras": la sección 2 es Saneamiento y la 3, Vivienda. */
+     Orden pedido por el usuario: 1 Infraestructura, 2 Ejecución presupuestal, 3 Obras de saneamiento, 4 Obras de vivienda,
+     5 PRESET (hoja 1) y 6 Vivienda y titulación, 7 Gobernanza, 8 FEN (hoja 2). El modelo repite "Estado situacional de obras":
+     la sección 3 es Saneamiento y la 4, Vivienda. (Las variables s1…s8 conservan su nombre original.) */
   const REP_ORG = 'MINISTERIO DE VIVIENDA, CONSTRUCCIÓN Y SANEAMIENTO - CARPETA SM';
   function reporteHTML(r) {
     const d = DATA.get(r), nac = r === 'Nacional', DR = window.DATA_REAL || {};
@@ -863,7 +915,7 @@
       tarjeta('Brecha saneamiento', brecha('Agua', B.agua) + brecha('Alcantarillado', B.saneamiento)) +
       tarjeta('Brecha vivienda', brecha('Vivienda', B.vivienda) + '<div class="rpt-bl"><p class="rpt-bt">Formalización</p><ul>' + kv('Viviendas sin título', num(B.formalizacion.sinTitulo)) + '</ul></div>') + '</div>');
 
-    /* 2 y 3. Estado situacional de obras por sector */
+    /* 3 y 4. Estado situacional de obras por sector */
     const dt = (s, S) => s.directa != null ? 'Directa: <b>' + F.n(s.directa) + '</b> | Transf.: <b>' + F.n(s.transferencia) + '</b>' :
       S.directaTotal != null ? 'Directa / Transf.: sin desglose por sector <span class="rpt-mut">(total de ambos: ' + F.n(S.directaTotal) + ' | ' + F.n(S.transferenciaTotal) + ')</span>' : 'Directa / Transf.: ' + sd;
     const cierre = s => s.conexiones != null ? F.n(s.conexiones) + ' conexiones' : s.cierreBrecha != null ? F.pct(s.cierreBrecha) : sd;
@@ -874,23 +926,29 @@
     const obras = sec => '<div class="rpt-g3">' + obra('Obras paralizadas', PA, sec, 'Inversión total', 'Población afectada', 'Cierre de brecha') +
       obra('Obras reactivadas', RE, sec, 'Inversión movilizada', 'Beneficiarios', 'Cierre de brecha') +
       obra('Obras en ejecución', EJ, sec, 'Monto en ejecución', 'Beneficiarios', 'Impacto en brecha') + '</div>';
-    const s2 = seccion(2, 'Estado situacional de obras de inversión pública · Saneamiento', obras('saneamiento'));
-    const s3 = seccion(3, 'Estado situacional de obras de inversión pública · Vivienda', obras('vivienda'));
+    const s2 = seccion(3, 'Estado situacional de obras de inversión pública · Saneamiento', obras('saneamiento'));
+    const s3 = seccion(4, 'Estado situacional de obras de inversión pública · Vivienda', obras('vivienda'));
 
-    /* 4. PRESET: el Excel trae monto y población solo del total */
+    /* 5. PRESET: con el Excel por estado, en evaluación, aptos y abandonados van por separado con su cantidad, monto y
+       población (no se suman ni hay total). Con los datos de ejemplo (sin estados) se mantiene el formato con total. */
+    const cab4 = '<table class="rpt-tb"><thead><tr><th>Estado del expediente</th><th>Cantidad</th><th>Monto de inversión proyectado</th><th>Población beneficiaria proyectada</th></tr></thead><tbody>';
+    const E = pr.estados;
+    const fila4 = (t, e) => '<tr><td>' + t + '</td><td>' + num(e.cantidad) + '</td><td>' + mS(e.monto) + '</td><td>' + num(e.poblacion) + '</td></tr>';
     const parte = (a, b) => a != null && b ? ' <span class="rpt-mut">(' + Math.round(a / b * 100) + ' %)</span>' : '';
     const soloTotal = '<i class="rpt-sd">solo en el total</i>';
-    const s4 = seccion(4, 'Evaluación de expedientes técnicos en PRESET', '<table class="rpt-tb"><thead><tr><th>Estado del expediente</th><th>Cantidad</th><th>Monto de inversión proyectado</th><th>Población beneficiaria proyectada</th></tr></thead><tbody>' +
-      '<tr><td>En proceso de evaluación</td><td>' + num(pr.evaluacion) + parte(pr.evaluacion, pr.total) + '</td><td>' + soloTotal + '</td><td>' + soloTotal + '</td></tr>' +
-      '<tr><td>Expedientes aptos (aprobados)</td><td>' + num(pr.aptos) + parte(pr.aptos, pr.total) + '</td><td>' + soloTotal + '</td><td>' + soloTotal + '</td></tr>' +
-      '<tr class="rpt-tt"><td>Total de expedientes en PRESET</td><td>' + num(pr.total) + '</td><td>' + mS(pr.monto) + '</td><td>' + num(pr.poblacion) + '</td></tr></tbody></table>');
+    const s4 = seccion(5, 'Evaluación de expedientes técnicos en PRESET', cab4 + (E
+      ? fila4('En proceso de evaluación', E.evaluacion) + fila4('Expedientes aptos (aprobados)', E.aptos) + fila4('Expedientes abandonados', E.abandonados)
+      : '<tr><td>En proceso de evaluación</td><td>' + num(pr.evaluacion) + parte(pr.evaluacion, pr.total) + '</td><td>' + soloTotal + '</td><td>' + soloTotal + '</td></tr>' +
+        '<tr><td>Expedientes aptos (aprobados)</td><td>' + num(pr.aptos) + parte(pr.aptos, pr.total) + '</td><td>' + soloTotal + '</td><td>' + soloTotal + '</td></tr>' +
+        '<tr class="rpt-tt"><td>Total de expedientes en PRESET</td><td>' + num(pr.total) + '</td><td>' + mS(pr.monto) + '</td><td>' + num(pr.poblacion) + '</td></tr>') +
+      '</tbody></table>');
 
-    /* 5. Ejecución presupuestal: sector Vivienda (37) del ranking MEF de la región */
+    /* 2. Ejecución presupuestal: sector Vivienda (37) del ranking MEF de la región */
     const R = (nac ? DR.ranking : (DR.porRegion || {})[d.nombre]) || [];
     const v37 = R.find(x => x.codigo === '37');
     const M = v => 'S/ ' + nf1.format(v / 1e6) + ' mill.';
     const tot = k => EJ[k] ? EJ[k].total : null;
-    const s5 = seccion(5, 'Ejecución presupuestal de inversiones ' + (DR.anio || 2026), '<div class="rpt-g2">' +
+    const s5 = seccion(2, 'Ejecución presupuestal de inversiones ' + (DR.anio || 2026), '<div class="rpt-g2">' +
       tarjeta('Total de proyectos en ejecución', '<p class="rpt-big">' + num((tot('saneamiento') || 0) + (tot('vivienda') || 0)) + ' <small>inversiones</small></p><ul>' + kv('Saneamiento', num(tot('saneamiento'))) + kv('Vivienda', num(tot('vivienda'))) + '</ul>') +
       tarjeta('Ejecución presupuesto ' + (DR.anio || 2026) + (v37 ? ' (PIM ' + M(v37.pim) + ')' : ''), v37 ?
         '<p class="rpt-big">' + F.pct(v37.avance) + ' <small>devengado</small></p><ul>' + kv('Devengado', M(v37.devengado)) + kv('Saldo por devengar', M(v37.pim - v37.devengado)) + kv('Certificado', sd) + '</ul>' :
@@ -932,7 +990,7 @@
     const pie = n => '<footer class="rpt-pie"><span>' + REP_ORG + '</span><span>' + esc(nac ? 'Nacional' : r) + ' · Página ' + n + ' de 2</span></footer>';
     return '<section class="rpt-hoja"><header class="rpt-top"><h1>Reporte ejecutivo sectorial</h1><span>' + esc(nac ? 'Nacional' : r) + '</span></header>' +
       '<div class="rpt-meta"><span><b>FECHA DE CORTE:</b> ' + esc($('#corte-datos').textContent) + '</span><span><b>FUENTE:</b> OGMEI / Torre de Control</span></div>' +
-      s1 + s2 + s3 + s4 + s5 + pie(1) + '</section>' +
+      s1 + s5 + s2 + s3 + s4 + pie(1) + '</section>' +
       '<section class="rpt-hoja p2">' + s6 + s7 + s8 + pie(2) + '</section>';
   }
   /* Dibuja las hojas A4 detrás del aviso, las convierte en imagen y descarga el PDF */
@@ -979,7 +1037,8 @@
   /* Contenido de los modales de la página actual (se rehace en cada render, así sigue a la región) */
   const MODALES = {};
   /* Podio de Sector: orden por avance de ejecución presupuestal ('avance') o por PIM ('pim') */
-  let rankModo = 'avance';
+  /* Ranking total por gobierno: tipos de gasto encendidos en la cápsula partida (uno u otro, o ambos = total; nunca ninguno) */
+  const rankTipos = { inversiones: true, actividades: false };
 
   /* ---------- Router ---------- */
   let page = 'general';
@@ -994,7 +1053,9 @@
   function render() {
     const d = DATA.get(region);
     $('#page-title').textContent = PAGES[page].title;
-    $('#page-q').textContent = region + ' · ' + PAGES[page].q;
+    /* en Reporte el ámbito se elige dentro de la página: se oculta el combo de la cabecera y el subtítulo no nombra la región */
+    $('#region-combo').hidden = page === 'reporte';
+    $('#page-q').textContent = (page === 'reporte' ? '' : region + ' · ') + PAGES[page].q;
     const c = $('#content');
     c.innerHTML = RENDER[page](d);
     montarCombo($('#region-combo'));             /* el valor pudo cambiar desde el mapa o la exportación */
@@ -1072,13 +1133,21 @@
   }
 
   /* clic en un departamento del mapa = cambiar el filtro (clic de nuevo = Nacional); clic en un botón con data-modal = abrir su modal */
-  $('#content').addEventListener('change', e => { if (e.target.closest && e.target.closest('.rep')) resumenExport(); });
+  $('#content').addEventListener('change', e => { if (e.target.closest && e.target.closest('.rep4')) resumenExport(); });
   window.addEventListener('resize', () => { if (page === 'reporte') resumenExport(); });
   $('#content').addEventListener('click', e => {
+    const rd = e.target.closest && e.target.closest('[data-repdoc]');
+    if (rd) { elegirDocRep(rd.dataset.repdoc); return; }
     const ex = e.target.closest && e.target.closest('[data-exportar]');
     if (ex) { if (!ex.disabled) { if (ex.dataset.exportar === 'reporte') exportarReporte(opcionesReporte()); else exportarDashboards(opcionesExport()); } return; }
-    const rk = e.target.closest && e.target.closest('[data-rank]');
-    if (rk) { if (rk.dataset.rank !== rankModo) { rankModo = rk.dataset.rank; render(); } return; }
+    const rt = e.target.closest && e.target.closest('[data-ranktipo]');
+    if (rt) {
+      const k = rt.dataset.ranktipo, otro = k === 'inversiones' ? 'actividades' : 'inversiones';
+      if (rankTipos[k] && !rankTipos[otro]) return;   /* siempre queda al menos una casilla marcada */
+      rankTipos[k] = !rankTipos[k];
+      render();
+      return;
+    }
     const b = e.target.closest && e.target.closest('[data-modal]');
     if (b) { abrirModal(b.dataset.modal, b); return; }
     const p = e.target.closest && e.target.closest('.mp[data-region]');
