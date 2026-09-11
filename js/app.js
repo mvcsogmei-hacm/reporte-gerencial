@@ -755,8 +755,9 @@
       '<div class="rep-types">' +
       tarjeta('dashboards', hoja169, 'Dashboards del tablero', 'Las páginas Información general y Gestión sectorial, tal como se ven en pantalla, con el menú contraído.', ['16:9', '1 hoja por página']) +
       tarjeta('reporte', hojaA4, 'Reporte ejecutivo sectorial', 'Formato del modelo en Word: infraestructura y brechas, presupuesto, obras, PRESET, vivienda, compromisos y FEN.', ['A4', '2 hojas por departamento']) +
+      tarjeta('ficha', hojaA4, 'Ficha de proyecto', 'PIAA Juliaca (C. Juliaca - PNSU), Puno: resumen, ejecución 2026, línea de tiempo, avance por etapa, riesgos y puntos de atención.', ['A4', '2 hojas', 'CUI 2331661']) +
       '</div><div class="rep-strip">' +
-      '<fieldset class="rep-fs"><legend>Ámbito</legend>' + regSel('rep-amb') + '</fieldset>' +
+      '<fieldset class="rep-fs" data-no-ficha' + (repDoc === 'ficha' ? ' disabled' : '') + '><legend>Ámbito</legend>' + regSel('rep-amb') + '</fieldset>' +
       '<fieldset class="rep-fs" data-solo-dash' + soloDash + '><legend>Páginas</legend>' + opt('checkbox', 'rep-pag', 'general', 'Información general', true) + opt('checkbox', 'rep-pag', 'gestion', 'Gestión sectorial', true) + '</fieldset>' +
       '<fieldset class="rep-fs" data-solo-dash' + soloDash + '><legend>Tema</legend>' + opt('radio', 'rep-tema', 'light', 'Claro', tema === 'light') + opt('radio', 'rep-tema', 'dark', 'Oscuro', tema === 'dark') + '</fieldset>' +
       '<button type="button" class="rep-btn" data-exportar="' + repDoc + '">' + ICO_EXPORT + 'Descargar PDF</button></div>' +
@@ -782,7 +783,7 @@
   function resumenExport() {
     const b = document.querySelector('.rep4 [data-exportar]');
     if (!b) return;
-    if (repDoc === 'reporte') { b.disabled = false; b.removeAttribute('title'); return; }
+    if (repDoc !== 'dashboards') { b.disabled = false; b.removeAttribute('title'); return; }   /* reporte A4 y ficha PPT no dependen del ancho ni de las páginas */
     const o = opcionesExport(), n = o.paginas.length * o.regiones.length;
     const angosta = window.innerWidth < ANCHO_MIN_EXPORT;
     const motivo = angosta ? 'Para exportar usa una ventana de al menos ' + ANCHO_MIN_EXPORT + ' px de ancho' : !n ? 'Elige al menos una página' : '';
@@ -794,6 +795,7 @@
     repDoc = doc;
     document.querySelectorAll('[data-repdoc]').forEach(t => { const on = t.dataset.repdoc === doc; t.classList.toggle('on', on); t.setAttribute('aria-pressed', on); });
     document.querySelectorAll('[data-solo-dash]').forEach(f => { f.disabled = doc !== 'dashboards'; });
+    document.querySelectorAll('[data-no-ficha]').forEach(f => { f.disabled = doc === 'ficha'; });   /* la ficha es de un proyecto: no usa ámbito */
     const b = document.querySelector('.rep4 [data-exportar]');
     if (b) b.dataset.exportar = doc;
     resumenExport();
@@ -811,18 +813,20 @@
     document.head.appendChild(s);
   });
   const librerias = () => Promise.all([cargarScript('js/vendor/html-to-image.js'), cargarScript('js/vendor/jspdf.umd.min.js'), cargarScript('js/vendor/fuente-embed.js')]);
-  function avisoExport(total) {
+  /* que: 'PDF' o 'PPT'; unidad: 'hojas' o 'lámina' */
+  function avisoExport(total, que, unidad) {
+    que = que || 'PDF'; unidad = unidad || 'hojas';
     const aviso = document.createElement('div');
     aviso.className = 'export-aviso';
-    aviso.innerHTML = '<div class="export-box"><span class="export-spin"></span><b>Preparando PDF</b><span class="export-prog">0 de ' + total + ' hojas</span></div>';
+    aviso.innerHTML = '<div class="export-box"><span class="export-spin"></span><b>Preparando ' + que + '</b><span class="export-prog">0 de ' + total + ' ' + unidad + '</span></div>';
     document.body.appendChild(aviso);
     return {
-      paso: n => { aviso.querySelector('.export-prog').textContent = n + ' de ' + total + ' hojas'; },
+      paso: n => { aviso.querySelector('.export-prog').textContent = n + ' de ' + total + ' ' + unidad; },
       fin: () => aviso.remove(),
       error: e => {
         console.error(e);
         aviso.querySelector('.export-spin').remove();
-        aviso.querySelector('b').textContent = 'No se pudo generar el PDF';
+        aviso.querySelector('b').textContent = 'No se pudo generar el ' + que;
         aviso.querySelector('.export-prog').textContent = String((e && e.message) || e);
         setTimeout(() => aviso.remove(), 4000);
       }
@@ -1030,8 +1034,47 @@
     if (!sinDescarga) pdf.save(nombreArchivo('Reporte ejecutivo sectorial', o.regiones));
     return pdf;
   }
+  /* ---------- Ficha de proyecto: reporte PDF A4 ----------
+     Reporte propio de dos hojas A4 hecho con la información de «PARA FICHA DE PROYECTO puno.pptx» (raíz),
+     con el sistema visual del Reporte ejecutivo sectorial. js/ficha-proyecto.js arma las hojas (hojas(corte));
+     aquí se ponen en un lienzo detrás del aviso, cada hoja se convierte en imagen y se arma el PDF con jsPDF. */
+  async function exportarFicha(sinDescarga) {
+    if (exportando) return null;
+    exportando = true;
+    const av = avisoExport(2, 'PDF', 'hojas');
+    const lienzo = document.createElement('div');
+    lienzo.className = 'rpt rpt-lienzo';
+    let pdf = null;
+    try {
+      await Promise.all([librerias(), cargarScript('js/ficha-proyecto.js')]);
+      lienzo.innerHTML = window.FichaProyecto.hojas($('#corte-datos').textContent);
+      document.body.appendChild(lienzo);
+      await esperar(50);
+      pdf = new jspdf.jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4', compress: true });
+      const W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight();
+      const hojas = lienzo.querySelectorAll('.rpt-hoja');
+      for (let i = 0; i < hojas.length; i++) {
+        const hj = hojas[i];
+        const img = await htmlToImage.toJpeg(hj, { width: hj.offsetWidth, height: hj.offsetHeight, pixelRatio: 2.5, quality: 0.92, backgroundColor: '#ffffff', skipFonts: true });
+        if (i) pdf.addPage('a4', 'portrait');
+        pdf.addImage(img, 'JPEG', 0, 0, W, H);
+        av.paso(i + 1);
+      }
+    } catch (e) {
+      av.error(e);
+      pdf = null;
+    } finally {
+      lienzo.remove();
+      exportando = false;
+    }
+    if (!pdf) return null;
+    av.fin();
+    if (!sinDescarga) pdf.save(window.FichaProyecto.archivo);
+    return pdf;
+  }
+
   /* acceso para automatizar pruebas o exportaciones desde la consola */
-  window.ReporteResumido = { exportarDashboards, exportarReporte };
+  window.ReporteResumido = { exportarDashboards, exportarReporte, exportarFicha };
 
   const RENDER = { general: renderGeneral, gestion: renderGestion, reporte: renderReporte, configuracion: renderConfiguracion };
   /* Contenido de los modales de la página actual (se rehace en cada render, así sigue a la región) */
@@ -1139,7 +1182,14 @@
     const rd = e.target.closest && e.target.closest('[data-repdoc]');
     if (rd) { elegirDocRep(rd.dataset.repdoc); return; }
     const ex = e.target.closest && e.target.closest('[data-exportar]');
-    if (ex) { if (!ex.disabled) { if (ex.dataset.exportar === 'reporte') exportarReporte(opcionesReporte()); else exportarDashboards(opcionesExport()); } return; }
+    if (ex) {
+      if (!ex.disabled) {
+        if (ex.dataset.exportar === 'reporte') exportarReporte(opcionesReporte());
+        else if (ex.dataset.exportar === 'ficha') exportarFicha();
+        else exportarDashboards(opcionesExport());
+      }
+      return;
+    }
     const rt = e.target.closest && e.target.closest('[data-ranktipo]');
     if (rt) {
       const k = rt.dataset.ranktipo, otro = k === 'inversiones' ? 'actividades' : 'inversiones';
