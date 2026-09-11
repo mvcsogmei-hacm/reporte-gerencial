@@ -43,6 +43,7 @@
   $('#collapse-btn').addEventListener('click', () => {
     app.classList.toggle('collapsed');
     store.set('rr-sidebar', app.classList.contains('collapsed') ? 'collapsed' : 'full');
+    fit(); animarMapa();   /* el ancho del contenido cambió de una vez: se reajusta el zoom en el mismo paso */
   });
   $('#menu-btn').addEventListener('click', () => app.classList.add('mobile-open'));
   $('#overlay').addEventListener('click', () => app.classList.remove('mobile-open'));
@@ -55,12 +56,10 @@
   sel.innerHTML = DATA.regiones.map(r => '<option value="' + esc(r) + '">' + esc(r) + '</option>').join('');
   sel.value = region;
   sel.addEventListener('change', () => setRegion(sel.value));
-  /* al cambiar de región el contenido entra en la dirección del recorrido por la lista:
-     hacia una región más abajo (p. ej. Piura → Tacna) entra de arriba hacia abajo; hacia una más arriba, de abajo hacia arriba */
+  /* al cambiar de región el contenido cambia en un solo paso, sin desplazar columnas (se veía como parpadeo) */
   function setRegion(r) {
-    const i0 = DATA.regiones.indexOf(region), i1 = DATA.regiones.indexOf(r);
     region = r; sel.value = r; store.set('rr-region', r);
-    render(i1 === i0 ? '' : (i1 > i0 ? 'down' : 'up'));
+    render();
   }
 
   $('#corte-datos').textContent = DATA.corte.datos;
@@ -226,16 +225,18 @@
       '--g:color-mix(in oklab, var(--map-g2) ' + (t(v) * 100).toFixed(1) + '%, var(--map-g1))';
     const ranking = lista.slice().sort((p, q) => q.valor - p.valor);
     const selN = norm(selected), cur = serie[selN];
+    /* si ya había una región elegida, el mapa nuevo nace en gris con la región marcada: así no destella de color a gris en cada filtro */
+    const conSel = !!(cur && mapaVista && mapaVista.sel);
 
     const paths = G.feats.map(f => {
       const d = serie[f.key];
-      return '<path class="mp" data-key="' + f.key + '" d="' + f.d + '" style="' + (d ? color(d.valor) : '--c:var(--map-mid);--g:var(--map-mid)') + '"' +
+      return '<path class="mp' + (conSel && f.key === selN ? ' sel' : '') + '" data-key="' + f.key + '" d="' + f.d + '" style="' + (d ? color(d.valor) : '--c:var(--map-mid);--g:var(--map-mid)') + '"' +
         (d ? ' data-region="' + esc(d.nombre) + '" data-tip="' + esc(d.nombre + ': ' + F.pp(d.valor) + ' · ' + (ranking.indexOf(d) + 1) + '.º de ' + ranking.length) + '"' : '') + '/>';
     }).join('');
 
 
 
-    return '<div class="map-wrap"><div class="map-cell"><svg class="map" viewBox="0 0 ' + G.W.toFixed(1) + ' ' + G.H.toFixed(1) + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Mapa del Perú: variación de la pobreza por región">' +
+    return '<div class="map-wrap"><div class="map-cell"><svg class="map' + (conSel ? ' has-sel' : '') + '" viewBox="0 0 ' + G.W.toFixed(1) + ' ' + G.H.toFixed(1) + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Mapa del Perú: variación de la pobreza por región">' +
       '<g class="map-zg">' + paths + '</g></svg></div></div>';
   }
 
@@ -244,6 +245,8 @@
      recuadro. El viewBox final se escribe primero (el resultado siempre es
      correcto) y el recorrido se anima con <animate> de SVG, sin depender de
      requestAnimationFrame. Animar el viewBox mantiene el dibujo nítido. */
+  /* último encuadre y si había región elegida: el mapa siguiente parte de ahí en vez de volver al Perú completo */
+  let mapaVista = null;
   function animarMapa() {
     const svg = $('#content .map'), G = mapGeo();
     if (!svg || !G) return;
@@ -257,8 +260,10 @@
       const w = Math.max(bw / .9, G.W / 30), h = Math.max(bh / .9, G.H / 30);   /* 90 % del recuadro; tope para regiones muy pequeñas */
       to = [f.box[0] + bw / 2 - w / 2, f.box[1] + bh / 2 - h / 2, w, h];
     }
-    const from = svg.getAttribute('viewBox'), toStr = to.map(v => v.toFixed(2)).join(' ');
-    void svg.getBoundingClientRect();            /* fija el estado inicial para que el paso a gris se anime */
+    const toStr = to.map(v => v.toFixed(2)).join(' ');
+    const from = (mapaVista && mapaVista.vb) || svg.getAttribute('viewBox');
+    mapaVista = { vb: toStr, sel: !!p };
+    void svg.getBoundingClientRect();            /* fija el estado inicial: desde Nacional el paso a gris se anima */
     svg.classList.toggle('has-sel', !!p);
     svg.querySelectorAll('.mp').forEach(el => el.classList.toggle('sel', el === p));
     svg.querySelectorAll('animate').forEach(el => el.remove());
@@ -636,14 +641,70 @@
   const ICO_CHEV = I('<path d="M6 9l6 6 6-6"/>');
   const TODAS = '__todas';
   const ANCHO_MIN_EXPORT = 1180;  /* por debajo, el tablero cambia a diseño apilado y las hojas saldrían mal */
+
+  /* ---------- Combo de departamento (encabezado y Reporte) ----------
+     Cerrado: interruptor Nacional | Región (propuesta 10 de propuestas-combos.html).
+     Abierto: cuadrícula con las 25 regiones (lista de la propuesta 3) y, en Reporte, «Nacional y las 25 regiones».
+     El <select> sigue en la página, oculto, y guarda el valor: el combo lo cambia y dispara "change",
+     así setRegion() y las opciones de exportación leen el select como antes. */
+  const ICO_MAPA = I('<path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/>');
+  const ICO_CAPAS = I('<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>');
+  /* dibuja el combo la primera vez y, siempre, lo pone al día con el valor del select */
+  function montarCombo(rc) {
+    if (!rc) return;
+    const s = rc.querySelector('select');
+    if (!rc.querySelector('.rc-seg')) {
+      const ops = [].slice.call(s.options);
+      const regs = ops.filter(o => o.value !== 'Nacional' && o.value !== TODAS), todas = ops.find(o => o.value === TODAS);
+      rc.insertAdjacentHTML('beforeend',
+        '<div class="rc-seg" role="group" aria-label="Departamento">' +
+        '<button type="button" class="rc-nat" data-rc="Nacional">' + ICO_MAPA + 'Nacional</button>' +
+        '<button type="button" class="rc-reg" data-rc-tog aria-haspopup="true" aria-expanded="false"><span class="rc-txt"></span>' + ICO_CHEV + '</button></div>' +
+        '<div class="rc-pop" hidden><button type="button" class="rc-top" data-rc="Nacional">' + ICO_MAPA + 'Nacional</button><div class="rc-grid">' + regs.map(o => '<button type="button" data-rc="' + esc(o.value) + '">' + esc(o.textContent) + '</button>').join('') + '</div>' +
+        (todas ? '<button type="button" class="rc-all" data-rc="' + TODAS + '">' + ICO_CAPAS + esc(todas.textContent) + '</button>' : '') + '</div>');
+    }
+    const v = s.value, o = s.options[s.selectedIndex];
+    rc.querySelectorAll('[data-rc]').forEach(b => { const on = b.dataset.rc === v; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+    rc.querySelector('.rc-reg').classList.toggle('on', v !== 'Nacional');
+    rc.querySelector('.rc-txt').textContent = v === 'Nacional' ? 'Elegir región' : (o ? o.textContent : v);
+  }
+  function abrirCombo(rc, abrir) {
+    rc.classList.toggle('open', abrir);
+    rc.querySelector('.rc-pop').hidden = !abrir;
+    rc.querySelector('[data-rc-tog]').setAttribute('aria-expanded', abrir);
+  }
+  document.addEventListener('click', e => {
+    const rc = e.target.closest && e.target.closest('.rc');
+    document.querySelectorAll('.rc.open').forEach(x => { if (x !== rc) abrirCombo(x, false); });
+    if (!rc) return;
+    if (e.target.closest('[data-rc-tog]')) {
+      const abrir = !rc.classList.contains('open');
+      abrirCombo(rc, abrir);
+      if (abrir) (rc.querySelector('.rc-pop .on') || rc.querySelector('.rc-pop [data-rc]')).focus();
+      return;
+    }
+    const b = e.target.closest('[data-rc]');
+    if (!b) return;
+    const s = rc.querySelector('select');
+    abrirCombo(rc, false);
+    if (s.value === b.dataset.rc) return;
+    s.value = b.dataset.rc;
+    montarCombo(rc);
+    s.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  document.addEventListener('keydown', e => {
+    const rc = e.key === 'Escape' && document.querySelector('.rc.open');
+    if (rc) { abrirCombo(rc, false); rc.querySelector('[data-rc-tog]').focus(); }
+  });
+
   function renderReporte() {
     const tema = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
     const opt = (tipo, name, value, label, checked, extra) => '<label class="rep-opt"><input type="' + tipo + '" name="' + name + '" value="' + value + '"' + (checked ? ' checked' : '') + '>' +
       '<span>' + label + (extra ? ' <b>' + extra + '</b>' : '') + '</span></label>';
-    /* segmentador de departamento, con el mismo estilo que el del encabezado */
-    const regSel = name => '<label class="region-pick rep-pick"><span class="region-k">Departamento</span>' +
-      '<select name="' + name + '" aria-label="Departamento">' + DATA.regiones.map(x => '<option value="' + esc(x) + '"' + (x === region ? ' selected' : '') + '>' + esc(x) + '</option>').join('') +
-      '<option value="' + TODAS + '">Nacional y las 25 regiones</option></select><span class="region-chev">' + ICO_CHEV + '</span></label>';
+    /* combo de departamento, igual al del encabezado, con la opción extra «Nacional y las 25 regiones» (lo dibuja montarCombo) */
+    const regSel = name => '<div class="rc rc-rep"><select name="' + name + '" aria-label="Departamento" hidden>' +
+      DATA.regiones.map(x => '<option value="' + esc(x) + '"' + (x === region ? ' selected' : '') + '>' + esc(x) + '</option>').join('') +
+      '<option value="' + TODAS + '">Nacional y las 25 regiones</option></select></div>';
     return '<div class="rep">' +
       '<section class="card rep-card"><div class="card-head"><div class="card-head-text"><h2 class="card-title">Exportar dashboards</h2>' +
       '<p class="card-sub">PDF con una hoja por página del tablero · menú siempre contraído</p></div></div><div class="card-body">' +
@@ -930,17 +991,18 @@
     render();
   }
 
-  function render(dir) {
+  function render() {
     const d = DATA.get(region);
     $('#page-title').textContent = PAGES[page].title;
     $('#page-q').textContent = region + ' · ' + PAGES[page].q;
     const c = $('#content');
     c.innerHTML = RENDER[page](d);
+    montarCombo($('#region-combo'));             /* el valor pudo cambiar desde el mapa o la exportación */
+    c.querySelectorAll('.rc').forEach(montarCombo);
     c.scrollTop = 0;
     document.title = PAGES[page].title + ' · ' + region + ' · Reporte gerencial';
     fit();
     animarMapa();
-    if (dir) { const g = c.querySelector('.grid'); if (g) g.classList.add('slide-' + dir); }
     if (page === 'reporte') resumenExport();
   }
 

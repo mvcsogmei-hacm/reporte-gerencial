@@ -16,14 +16,15 @@
   --muted: #8794A6;
   --border: #E4E9F0;
   --shadow: 0 1px 2px rgba(15, 37, 69, .04), 0 6px 20px rgba(15, 37, 69, .05);
-  /* Menú: siempre azul oscuro (igual en los dos temas); la opción elegida va en azul con texto blanco */
+  /* Menú: siempre azul oscuro (igual en los dos temas); la opción elegida va en blanco con texto azul (propuesta 3 del menú) */
   --side-bg: linear-gradient(180deg, #0F2E57 0%, #0B2545 55%, #081B34 100%);
   --side-bg-2: rgba(255, 255, 255, .08);
   --side-ink: #C3D2E6;
   --side-ink-2: #7F96B5;
   --side-border: rgba(255, 255, 255, .09);
-  --side-active-bg: #2F6FC4;
-  --side-active-ink: #FFFFFF;
+  --side-active-bg: #FFFFFF;
+  --side-active-ink: #0F2E57;
+  --side-active-ico: #1E5AA8;
   --accent: #1E5AA8;
   --accent-ink: #164A8A;
   --accent-soft: rgba(30, 90, 168, .10);
@@ -171,39 +172,45 @@ svg { display: block; font-family: var(--font); }
   flex: 0 0 var(--sidebar-w); width: var(--sidebar-w); height: 100%;
   background: var(--side-bg); color: var(--side-ink);
   border-right: 1px solid var(--side-border);
-  display: flex; flex-direction: column;
-  transition: flex-basis .22s ease, width .22s ease, transform .22s ease;
+  display: flex; flex-direction: column; overflow: hidden;
+  /* el ancho cambia de una vez: animarlo reacomodaba el tablero cuadro a cuadro (parpadeo); solo el cajón móvil se desliza */
+  transition: transform .22s ease;
 }
 .main { position: relative; flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
 .app.collapsed .sidebar { flex-basis: var(--sidebar-w-min); width: var(--sidebar-w-min); }
-.app.collapsed .nav-label, .app.collapsed .brand-text, .app.collapsed .corte { display: none; }
-.app.collapsed .nav-item, .app.collapsed .collapse-btn { justify-content: center; padding-inline: 0; }
-.app.collapsed .brand { justify-content: center; padding-inline: 0; }
+/* contraído: los textos se desvanecen sin cambiar alturas ni posiciones (los iconos quedan en su sitio y nada salta) */
+.app.collapsed :is(.nav-label, .brand-text, .corte, .nav-num) { opacity: 0; pointer-events: none; }
 .app.collapsed .collapse-btn svg { transform: rotate(180deg); }
+/* el título de cada grupo queda como una línea divisoria, en el mismo alto */
+.app.collapsed .nav-group { color: transparent; }
+.app.collapsed .nav-group::after { opacity: 1; }
 
 /* Brand */
 .brand { height: var(--topbar-h); display: flex; align-items: center; gap: 12px; padding: 0 20px; border-bottom: 1px solid var(--side-border); }
 .brand-mark { width: 38px; height: 38px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 12px; background: #2F6FC4; color: #fff; }
-.brand-text { display: flex; flex-direction: column; line-height: 1.15; white-space: nowrap; }
+.brand-text { display: flex; flex-direction: column; line-height: 1.15; white-space: nowrap; transition: opacity .18s ease; }
 .brand-title { font-weight: 600; font-size: 15px; color: #FFFFFF; }
 .brand-sub { font-size: 11px; color: var(--side-ink-2); letter-spacing: .06em; text-transform: uppercase; }
 
-/* Nav */
-.nav { display: flex; flex-direction: column; gap: 6px; padding: 16px 14px; }
-.nav-item { display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 8px 14px; border-radius: 14px; color: var(--side-ink); font-weight: 500; font-size: 13.5px; line-height: 1.25; }
+/* Nav (propuesta 3 del menú): grupos «Tableros» y «Herramientas»; los tableros llevan el número de lámina */
+.nav { display: flex; flex-direction: column; gap: 3px; padding: 8px 14px 16px; }
+.nav-group { position: relative; padding: 10px 14px 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--side-ink-2); white-space: nowrap; transition: color .18s ease; }
+.nav-group::after { content: ""; position: absolute; top: 58%; right: 10px; left: 10px; height: 1px; background: rgba(255, 255, 255, .14); opacity: 0; transition: opacity .18s ease; }
+.nav-item { display: flex; align-items: center; gap: 12px; min-height: 40px; overflow: hidden; padding: 8px 14px; border-radius: 12px; color: var(--side-ink); font-weight: 500; font-size: 13.5px; line-height: 1.25; white-space: nowrap; }
 .nav-item svg { flex: 0 0 auto; opacity: .85; }
-.nav-label { min-width: 0; overflow-wrap: anywhere; }
+.nav-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; transition: opacity .18s ease; }
+.nav-num { flex: 0 0 auto; margin-left: auto; font-size: 11px; font-weight: 600; color: var(--side-ink-2); font-variant-numeric: tabular-nums; transition: opacity .18s ease; }
 .nav-item:hover { background: var(--side-bg-2); color: #FFFFFF; }
-.nav-item.active { background: var(--side-active-bg); color: var(--side-active-ink); box-shadow: 0 6px 16px rgba(0, 0, 0, .25); }
-.nav-item.active svg { color: var(--side-active-ink); opacity: 1; }
+.nav-item.active { background: var(--side-active-bg); color: var(--side-active-ink); font-weight: 600; }
+.nav-item.active svg, .nav-item.active .nav-num { color: var(--side-active-ico); opacity: 1; }
 
 .sidebar-foot { margin-top: auto; padding: 12px; border-top: 1px solid var(--side-border); display: flex; flex-direction: column; gap: 10px; }
-.corte { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; padding: 8px 10px; font-size: 12px; }
+.corte { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; padding: 8px 10px; font-size: 12px; white-space: nowrap; transition: opacity .18s ease; }
 .corte-k { color: var(--side-ink-2); }
 .corte-v { color: var(--side-ink); text-align: right; font-variant-numeric: tabular-nums; }
-.collapse-btn { display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 14px; border: 1px solid var(--side-border); border-radius: 10px; background: transparent; color: var(--side-ink); white-space: nowrap; }
+.collapse-btn { display: flex; align-items: center; gap: 12px; height: 40px; overflow: hidden; padding: 0 16px; border: 1px solid var(--side-border); border-radius: 10px; background: transparent; color: var(--side-ink); white-space: nowrap; }
 .collapse-btn:hover { background: var(--side-bg-2); color: #FFFFFF; }
-.collapse-btn svg { transition: transform .22s; }
+.collapse-btn svg { flex: 0 0 auto; transition: transform .22s; }   /* sin encogerse: contraído, la flecha sigue visible */
 
 /* Cabecera */
 .page-head-row { display: flex; align-items: center; gap: 16px; padding: 14px 20px 0; flex: 0 0 auto; }
@@ -231,6 +238,29 @@ svg { display: block; font-family: var(--font); }
 .region-chev svg { width: 16px; height: 16px; }
 .region-pick:hover .region-chev, .region-pick:focus-within .region-chev { color: var(--accent); }
 .rep-pick { width: 100%; max-width: 380px; }
+
+/* Combo de departamento (encabezado y Reporte): cerrado = interruptor Nacional | Región (propuesta 10);
+   abierto = cuadrícula de regiones (propuesta 3). El <select> queda oculto y guarda el valor. */
+.rc { position: relative; z-index: 40; flex: 0 0 auto; }
+.rc svg { width: 16px; height: 16px; flex: 0 0 auto; }
+.rc-seg { display: flex; gap: 2px; height: 40px; padding: 3px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); box-shadow: 0 1px 2px rgba(15, 37, 69, .06); }
+.rc-seg button { display: flex; align-items: center; gap: 6px; min-width: 0; height: 100%; padding: 0 14px; border: 0; border-radius: 999px; background: transparent; color: var(--ink-2); font-size: 13.5px; font-weight: 600; white-space: nowrap; transition: background .15s, color .15s; }
+.rc-seg button:not(.on):hover { background: var(--surface-2); color: var(--ink); }
+.rc-seg button.on { background: #1F4E8C; color: #fff; }
+.rc-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.rc-reg svg { transition: transform .15s; }
+.rc.open .rc-reg svg { transform: rotate(180deg); }
+.rc-pop { position: absolute; top: calc(100% + 6px); right: 0; width: 440px; max-width: calc(100vw - 32px); padding: 6px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: 0 4px 10px rgba(15, 37, 69, .08), 0 18px 44px rgba(15, 37, 69, .18); animation: rc-in .14s ease-out; }
+/* solo desplazamiento (sin transparencia): la lista nunca deja ver lo que hay debajo */
+@keyframes rc-in { from { transform: translateY(-4px); } to { transform: none; } }
+.rc-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.rc-pop button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 30px; padding: 4px 6px; border: 0; border-radius: 7px; background: var(--hb-band); color: var(--ink); font-size: 12.5px; line-height: 1.2; text-align: center; }
+.rc-pop button:hover { background: var(--hb-track); }
+.rc-pop button.on { background: #1F4E8C; color: #fff; font-weight: 600; }
+.rc-top { width: 100%; min-height: 36px; margin-bottom: 6px; font-weight: 600; }
+.rc-all { width: 100%; min-height: 36px; margin-top: 6px; }
+.rc-rep .rc-pop { right: auto; left: 0; }
+@media (prefers-reduced-motion: reduce) { .rc-pop { animation: none; } }
 
 /* Contenido */
 .content { flex: 1; min-height: 0; padding: 12px 20px 14px; display: flex; flex-direction: column; }
@@ -728,13 +758,17 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
   .app.mobile-open .overlay { display: block; }
   .menu-btn { display: grid; }
   .collapse-btn { display: none; }
-  .app.collapsed .nav-label, .app.collapsed .brand-text, .app.collapsed .corte { display: initial; }
+  .app.collapsed :is(.nav-label, .brand-text, .corte, .nav-num) { opacity: 1; pointer-events: auto; }
+  .app.collapsed .nav-group { color: var(--side-ink-2); }
+  .app.collapsed .nav-group::after { opacity: 0; }
   .page-head-row, .content { padding-left: 16px; padding-right: 16px; }
   .page-head-row { flex-wrap: wrap; row-gap: 10px; }
   .page-head { flex: 1 1 auto; }
   .topbar-right { margin-left: 0; width: 100%; }
   .region-pick { flex: 1; min-width: 0; }
   .region-pick select { width: 100%; }
+  .topbar-right .rc { flex: 1; min-width: 0; }
+  .topbar-right .rc-reg { flex: 1; justify-content: space-between; }
   .page-title { font-size: 24px; }
   .hoy-pill { display: none; }
   .kpi-row, .kpi-row.five { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -744,6 +778,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
   .kpi-row, .kpi-row.five { grid-template-columns: 1fr; }
   .page-q { display: none; }
   .region-pick select { min-width: 90px; }
+  .rc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stats2 { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -885,13 +920,8 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
 .crd .cr-blk.r { flex-flow: row wrap; align-items: center; gap: 3px 8px; }
 .crd .cr-blk.r > small, .crd .cr-blk.r em { flex-basis: 100%; }
 
-/* ---------- Transición al cambiar de región: entra en la dirección del recorrido por la lista ---------- */
-/* sin desvanecido ni retrasos: las columnas nunca quedan invisibles, solo se desplazan */
-@keyframes rr-entra-abajo { from { transform: translateY(-22px); } to { transform: none; } }
-@keyframes rr-entra-arriba { from { transform: translateY(22px); } to { transform: none; } }
-.grid.slide-down > * { animation: rr-entra-abajo .35s cubic-bezier(.2, .7, .2, 1); }
-.grid.slide-up > * { animation: rr-entra-arriba .35s cubic-bezier(.2, .7, .2, 1); }
-@media (prefers-reduced-motion: reduce) { .grid.slide-down > *, .grid.slide-up > * { animation: none; } }
+/* (Se quitó el desplazamiento de columnas al cambiar de región: se veía como parpadeo de todo el tablero.
+   El único movimiento que queda es el acercamiento del mapa, que parte del encuadre anterior.) */
 
 /* ---------- Página 1 · Índices y actividades: filas del mismo alto y barras más gruesas ---------- */
 .page1 .idx-list { display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: minmax(0, 1fr); gap: 6px; width: 100%; }
