@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reporte gerencial · MVCS OGMEI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="css/styles.css?v=63">
+</head>
+<body>
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+
+<div class="app" id="app">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar" aria-label="Menú principal">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M8 15v-4M12 15V8M16 15v-2"/></svg>
+      </span>
+      <span class="brand-text">
+        <span class="brand-title">Reporte Gerencial</span>
+        <span class="brand-sub">MVCS · OGMEI</span>
+      </span>
+    </div>
+
+    <nav class="nav" id="nav">
+      <a class="nav-item" href="#/general" data-page="general" title="Información general">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        <span class="nav-label">Información general</span>
+      </a>
+      <a class="nav-item" href="#/gestion" data-page="gestion" title="Gestión sectorial">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg>
+        <span class="nav-label">Gestión sectorial</span>
+      </a>
+      <a class="nav-item" href="#/reporte" data-page="reporte" title="Reporte">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M12 10.5v6"/><path d="M9.5 14l2.5 2.5 2.5-2.5"/></svg>
+        <span class="nav-label">Reporte</span>
+      </a>
+      <a class="nav-item" href="#/configuracion" data-page="configuracion" title="Configuración">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+        <span class="nav-label">Configuración</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="corte">
+        <span class="corte-k">Corte de datos</span>
+        <span class="corte-v" id="corte-datos">—</span>
+      </div>
+      <button class="collapse-btn" id="collapse-btn" type="button" aria-label="Contraer menú" title="Contraer menú">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+        <span class="nav-label">Contraer</span>
+      </button>
+    </div>
+  </aside>
+  <div class="overlay" id="overlay"></div>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main">
+    <header class="page-head-row">
+      <button class="icon-btn menu-btn" id="menu-btn" type="button" aria-label="Abrir menú">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <div class="page-head">
+        <h1 class="page-title" id="page-title">Información general</h1>
+        <p class="page-q" id="page-q"></p>
+      </div>
+      <div class="topbar-right">
+        <label class="region-pick" for="region-sel">
+          <span class="region-k">Departamento</span>
+          <select id="region-sel" aria-label="Departamento"></select>
+          <span class="region-chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+        </label>
+      </div>
+    </header>
+
+    <main class="content" id="content"></main>
+  </div>
+</div>
+
+<dialog class="modal" id="modal" aria-labelledby="modal-title">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div><h2 class="modal-title" id="modal-title"></h2><p class="modal-sub" id="modal-sub"></p></div>
+      <button class="icon-btn" type="button" data-close aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</dialog>
+
+<div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+
+<script src="js/data.js"></script>
+<script src="map/peru_departamental.js"></script>
+<script src="data/data.js"></script>
+<script src="js/app.js?v=63"></script>
+</body>
+</html>

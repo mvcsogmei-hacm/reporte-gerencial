@@ -1,0 +1,15 @@
+# Datos internos: se quedan en la PC (data.js ya trae lo que usa el tablero)
+*.xlsx
+*.xls
+*.docx
+*.pptx
+Reporte/
+# Pantallas de propuestas de diseño
+propuestas-*.html
+css/propuestas*.css
+js/propuestas*.js
+# Temporales
+__pycache__/
+*.pyc
+_prueba-*.html
+~$*
